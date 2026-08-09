@@ -179,10 +179,28 @@ class UserFS:
             "size": s.st_size,
             "modified": s.st_mtime,
             "type": "directory" if os.path.isdir(path) else "file",
+            "writable": self._is_writable_sync(path),
         }
 
+    def _is_writable_sync(self, path: str) -> bool:
+        if not self.is_path_allowed(path):
+            return False
+        try:
+            if os.statvfs(path).f_flag & getattr(os, "ST_RDONLY", 0):
+                return False
+        except (AttributeError, OSError):
+            pass
+        try:
+            return os.access(path, os.W_OK, effective_ids=True)
+        except TypeError:
+            return os.access(path, os.W_OK)
+
+    async def is_writable(self, path: str) -> bool:
+        """Return whether the current process can write to *path*."""
+        return await asyncio.to_thread(self._is_writable_sync, path)
+
     async def listdir(self, path: str) -> list[dict]:
-        """List directory contents with type, size, and mtime."""
+        """List directory contents with type, size, mtime, and writability."""
         self._check_path(path)
         def _list_sync():
             entries = []
@@ -197,6 +215,7 @@ class UserFS:
                         "type": "directory" if os.path.isdir(full) else "file",
                         "size": s.st_size,
                         "modified": s.st_mtime,
+                        "writable": self._is_writable_sync(full),
                     })
                 except OSError:
                     continue

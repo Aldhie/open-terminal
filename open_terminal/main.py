@@ -510,7 +510,7 @@ async def list_files(
     if not await fs.isdir(target):
         raise HTTPException(status_code=404, detail="Directory not found")
     entries = await fs.listdir(target)
-    return {"dir": target, "entries": entries}
+    return {"dir": target, "writable": await fs.is_writable(target), "entries": entries}
 
 
 @app.get(
