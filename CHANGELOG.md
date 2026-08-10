@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.35] - 2026-08-09
+
+### Added
+
+- Added an OpenShift image for restricted non-root clusters. It runs without root, blocks unsupported runtime package installs, and clearly reports when multi-user mode is requested.
+- Added file browser root metadata so clients can show a friendly starting point and hide parent navigation above it.
+- Added `OPEN_TERMINAL_FILE_BROWSER_ROOT` so operators can choose Home, a specific workspace path, a path under Home, or no visual root.
+- Added writable status to file and folder listings so clients can disable save, upload, rename, and delete actions before users hit a permission error.
+- Added template variables for custom system prompts, including operating system, host name, user, shell, Python version, and Home path.
+
+### Fixed
+
+- Fixed the MCP server connection when Open Terminal is protected by an API key. MCP requests now include the configured bearer token.
+
 ## [0.11.34] - 2026-04-08
 
 ### Added
