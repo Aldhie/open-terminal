@@ -1,0 +1,27 @@
+# Dockerfile.sandbox
+# Fork of open-webui/open-terminal with a PRIVATE Docker daemon (dockerd) bundled.
+# Designed to run under the Sysbox runtime (runtime: sysbox-runc) so the
+# nested dockerd is fully isolated from the host - no host docker.sock mount
+# is required or supported by this variant.
+#
+# Base image already bundles Docker CLI + Compose + Buildx (see upstream README).
+# This file only ADDS the daemon (dockerd) and a wrapper entrypoint that starts
+# it before handing off to the original open-terminal entrypoint.
+
+FROM ghcr.io/open-webui/open-terminal:latest
+
+USER root
+
+# Install Docker Engine (dockerd) - CLI/Compose/Buildx are already present in
+# the base image, we only need the daemon itself for nested Docker-in-Docker.
+RUN curl -fsSL https://get.docker.com | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint-dind.sh /usr/local/bin/entrypoint-dind.sh
+RUN chmod +x /usr/local/bin/entrypoint-dind.sh
+
+# Keep original user for the app process; dockerd itself is started as root
+# via sudo inside entrypoint-dind.sh, then privileges drop back for the app.
+USER user
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-dind.sh"]
