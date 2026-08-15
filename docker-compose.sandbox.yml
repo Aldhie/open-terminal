@@ -20,6 +20,15 @@ services:
     container_name: sandbox-open-terminal
     runtime: sysbox-runc          # <-- key line: isolated nested Docker
     restart: unless-stopped
+    # Sysbox does not grant these by default. CAP_NET_ADMIN is required by
+    # entrypoint.sh's egress firewall (iptables/ipset) and CAP_SETPCAP is
+    # required for the subsequent `capsh --drop=cap_net_admin` call that
+    # permanently drops CAP_NET_ADMIN again once the firewall is in place.
+    # Without both, capsh fails, its child dies, tini exits, and the
+    # container crash-loops under restart: unless-stopped.
+    cap_add:
+      - NET_ADMIN
+      - SETPCAP
     # NOTE: intentionally NO bind-mount of /var/run/docker.sock from the host.
     volumes:
       - sandbox-workspace:/home/user
