@@ -24,4 +24,9 @@ RUN chmod +x /usr/local/bin/entrypoint-dind.sh
 # via sudo inside entrypoint-dind.sh, then privileges drop back for the app.
 USER user
 
-ENTRYPOINT ["/usr/local/bin/entrypoint-dind.sh"]
+# IMPORTANT: keep tini (from the base image) as PID1. The sandbox forks
+# several long-lived children (dockerd, containerd, dnsmasq, open-terminal),
+# and without a proper init/reaper, exited children become zombies that
+# still satisfy kill(pid, 0) checks - causing dockerd/containerd to falsely
+# report "process with PID N is still running" on subsequent starts.
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint-dind.sh"]
