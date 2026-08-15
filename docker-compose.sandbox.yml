@@ -10,6 +10,15 @@
 #      (if sysbox-fs fails to start via systemd with a timeout, check for a
 #      duplicate "Type=" directive in its unit file and override to
 #      Type=simple via a drop-in - see Brain-Memory entry for details)
+#
+# KNOWN LIMITATION: the base image's built-in egress firewall
+# (OPEN_TERMINAL_ALLOWED_DOMAINS) is intentionally left UNSET here. It
+# relies on `capsh --drop=cap_net_admin` succeeding for the non-root
+# "user" process via ambient capabilities from cap_add, which Sysbox does
+# not replicate the same way vanilla runc does - capsh fails, crashing
+# the container in a restart loop. Network egress restriction for this
+# sandbox should be enforced at the host firewall / Docker network policy
+# level instead until this is resolved upstream or worked around.
 
 services:
   sandbox-open-terminal:
@@ -20,22 +29,13 @@ services:
     container_name: sandbox-open-terminal
     runtime: sysbox-runc          # <-- key line: isolated nested Docker
     restart: unless-stopped
-    # Sysbox does not grant these by default. CAP_NET_ADMIN is required by
-    # entrypoint.sh's egress firewall (iptables/ipset) and CAP_SETPCAP is
-    # required for the subsequent `capsh --drop=cap_net_admin` call that
-    # permanently drops CAP_NET_ADMIN again once the firewall is in place.
-    # Without both, capsh fails, its child dies, tini exits, and the
-    # container crash-loops under restart: unless-stopped.
-    cap_add:
-      - NET_ADMIN
-      - SETPCAP
     # NOTE: intentionally NO bind-mount of /var/run/docker.sock from the host.
     volumes:
       - sandbox-workspace:/home/user
     environment:
       - OPEN_TERMINAL_API_KEY=${SANDBOX_TERMINAL_KEY}
-      # Egress firewall allow-list (built into the base image) - adjust as needed
-      - OPEN_TERMINAL_ALLOWED_DOMAINS=*.pypi.org,*.npmjs.org,registry-1.docker.io,github.com,raw.githubusercontent.com
+      # Egress firewall intentionally DISABLED under Sysbox - see note above.
+      # - OPEN_TERMINAL_ALLOWED_DOMAINS=*.pypi.org,*.npmjs.org,registry-1.docker.io,github.com,raw.githubusercontent.com
     networks:
       - sandbox-egress-net
     deploy:
