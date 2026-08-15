@@ -19,6 +19,13 @@
 # the container in a restart loop. Network egress restriction for this
 # sandbox should be enforced at the host firewall / Docker network policy
 # level instead until this is resolved upstream or worked around.
+#
+# NETWORKING: this service joins TWO networks -
+#   - sandbox-egress-net: isolated bridge for the sandbox's own outbound
+#     traffic (created by this compose file).
+#   - agentic-internal: pre-existing EXTERNAL network shared with the main
+#     Open WebUI stack, so Admin Panel -> Integrations -> Open Terminal can
+#     reach this container by hostname (http://sandbox-open-terminal:8000).
 
 services:
   sandbox-open-terminal:
@@ -38,6 +45,7 @@ services:
       # - OPEN_TERMINAL_ALLOWED_DOMAINS=*.pypi.org,*.npmjs.org,registry-1.docker.io,github.com,raw.githubusercontent.com
     networks:
       - sandbox-egress-net
+      - agentic-internal
     deploy:
       resources:
         limits:
@@ -47,6 +55,8 @@ services:
 networks:
   sandbox-egress-net:
     driver: bridge
+  agentic-internal:
+    external: true
 
 volumes:
   sandbox-workspace:
