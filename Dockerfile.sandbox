@@ -14,8 +14,18 @@ USER root
 
 # Install Docker Engine (dockerd) - CLI/Compose/Buildx are already present in
 # the base image, we only need the daemon itself for nested Docker-in-Docker.
+# get.docker.com also creates the "docker" system group as a side effect.
 RUN curl -fsSL https://get.docker.com | sh \
     && rm -rf /var/lib/apt/lists/*
+
+# Add "user" to the "docker" group AT BUILD TIME (not via a runtime usermod
+# in entrypoint.sh). Group membership is resolved once when a process is
+# created; exec() preserves the calling process's existing credentials, so
+# a runtime usermod can't retroactively fix the group list of the already-
+# running entrypoint chain. Baking it into the image means every process
+# from PID1 onward has correct group membership from the start - no sudo,
+# no `newgrp docker`, no per-session activation needed.
+RUN usermod -aG docker user
 
 COPY entrypoint-dind.sh /usr/local/bin/entrypoint-dind.sh
 RUN chmod +x /usr/local/bin/entrypoint-dind.sh
